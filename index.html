@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Editor Whiteboard</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+        #whiteboard {
+            width: 100%;
+            height: 100%;
+            background-color: #f0f0f0;
+            position: relative;
+        }
+        #image-container {
+            position: absolute;
+            border: 2px solid #333;
+            cursor: move;
+        }
+        .resize-handle {
+            width: 10px;
+            height: 10px;
+            background-color: #333;
+            position: absolute;
+        }
+        #paste-instruction {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: Arial, sans-serif;
+            font-size: 24px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div id="whiteboard">
+        <div id="paste-instruction">Paste an image here (Ctrl+V)</div>
+    </div>
+
+    <script>
+        const whiteboard = document.getElementById('whiteboard');
+        let imageContainer = null;
+
+        whiteboard.addEventListener('paste', function(e) {
+            const items = e.clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    const blob = items[i].getAsFile();
+                    const url = URL.createObjectURL(blob);
+                    createImage(url);
+                    document.getElementById('paste-instruction').style.display = 'none';
+                    break;
+                }
+            }
+        });
+
+        function createImage(url) {
+            if (imageContainer) {
+                whiteboard.removeChild(imageContainer);
+            }
+
+            imageContainer = document.createElement('div');
+            imageContainer.id = 'image-container';
+            const img = document.createElement('img');
+            img.src = url;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            imageContainer.appendChild(img);
+
+            // Add resize handles
+            const handles = ['nw', 'ne', 'sw', 'se'];
+            handles.forEach(pos => {
+                const handle = document.createElement('div');
+                handle.className = `resize-handle ${pos}`;
+                handle.style[pos[0]] = '-5px';  // n or s
+                handle.style[pos[1]] = '-5px';  // w or e
+                imageContainer.appendChild(handle);
+            });
+
+            whiteboard.appendChild(imageContainer);
+            makeResizable(imageContainer);
+        }
+
+        function makeResizable(element) {
+            let isResizing = false;
+            let currentHandle = null;
+            let startX, startY, startWidth, startHeight;
+
+            element.addEventListener('mousedown', function(e) {
+                if (e.target.classList.contains('resize-handle')) {
+                    isResizing = true;
+                    currentHandle = e.target.classList[1];
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    startWidth = element.offsetWidth;
+                    startHeight = element.offsetHeight;
+                } else {
+                    element.style.cursor = 'move';
+                }
+            });
+
+            document.addEventListener('mousemove', function(e) {
+                if (!isResizing) return;
+
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+
+                if (currentHandle.includes('e')) element.style.width = `${startWidth + dx}px`;
+                if (currentHandle.includes('s')) element.style.height = `${startHeight + dy}px`;
+                if (currentHandle.includes('w')) {
+                    element.style.width = `${startWidth - dx}px`;
+                    element.style.left = `${element.offsetLeft + dx}px`;
+                }
+                if (currentHandle.includes('n')) {
+                    element.style.height = `${startHeight - dy}px`;
+                    element.style.top = `${element.offsetTop + dy}px`;
+                }
+            });
+
+            document.addEventListener('mouseup', function() {
+                isResizing = false;
+                element.style.cursor = 'move';
+            });
+
+            // Make the image draggable
+            let isDragging = false;
+            let startLeft, startTop;
+
+            element.addEventListener('mousedown', function(e) {
+                if (!e.target.classList.contains('resize-handle')) {
+                    isDragging = true;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    startLeft = element.offsetLeft;
+                    startTop = element.offsetTop;
+                }
+            });
+
+            document.addEventListener('mousemove', function(e) {
+                if (!isDragging) return;
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                element.style.left = `${startLeft + dx}px`;
+                element.style.top = `${startTop + dy}px`;
+            });
+
+            document.addEventListener('mouseup', function() {
+                isDragging = false;
+            });
+        }
+    </script>
+</body>
+</html>
